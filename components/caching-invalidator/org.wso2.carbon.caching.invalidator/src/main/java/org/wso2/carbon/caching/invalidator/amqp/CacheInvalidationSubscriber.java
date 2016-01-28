@@ -19,6 +19,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.ShutdownSignalException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.clustering.api.CoordinatedActivity;
@@ -129,10 +130,12 @@ public class CacheInvalidationSubscriber implements CoordinatedActivity {
     private Runnable messageReciever = new Runnable() {
         @Override
         public void run() {
-            while(consumer != null) {
+            while(consumer != null && consumer.getChannel().getConnection().isOpen()) {
                 try {
                     QueueingConsumer.Delivery delivery = consumer.nextDelivery();
                     onMessage(delivery.getBody());
+                } catch (ShutdownSignalException e) {
+                    log.error("Message Server Connection has been shutdown");
                 } catch (Exception e) {
                     log.error("Global cache invalidation: error message recieve.", e);
                 }
